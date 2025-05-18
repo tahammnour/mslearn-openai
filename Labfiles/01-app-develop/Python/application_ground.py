@@ -23,7 +23,10 @@ async def main():
         api_version="2024-02-15-preview"
         )
         #Initialize messages array
-
+        print("\nAdding grounding context from grounding.txt")
+        grounding_text = open(file="grounding.txt", encoding="utf8").read().strip()
+        messages_array = [{"role": "user", "content": grounding_text}]
+       
         while True:
             # Pause the app to allow the user to enter the system prompt
             print("------------------\nPausing the app to allow you to change the system prompt.\nPress enter to continue...")
@@ -38,23 +41,20 @@ async def main():
 
             # Format and send the request to the model
 
-            await call_openai_model(system_message = system_text, 
-                                    user_message = user_text, 
-                                    model=azure_oai_deployment, 
-                                    client=client
-                                    )
+            messages_array.append({"role": "system", "content": system_text})
+            messages_array.append({"role": "user", "content": user_text})
+            await call_openai_model(messages=messages_array, 
+                model=azure_oai_deployment, 
+                client=client
+            )
 
     except Exception as ex:
         print(ex)
 
 # Define the function that will get the response from Azure OpenAI endpoint
-async def call_openai_model(system_message, user_message, model, client):
+async def call_openai_model(messages, model, client):
     # Get response from Azure OpenAI
-    messages =[
-     {"role": "system", "content": system_message},
-     {"role": "user", "content": user_message},
-    ]
-        
+    
     print("\nSending request to Azure OpenAI model...\n")
 
     # Call the Azure OpenAI model
@@ -63,10 +63,10 @@ async def call_openai_model(system_message, user_message, model, client):
         messages=messages,
         temperature=0.7,
         max_tokens=800
-    )
+    )   
 
-    # Print the response
     print("Response:\n" + response.choices[0].message.content + "\n")
+    messages.append({"role": "assistant", "content": response.choices[0].message.content})
 
 if __name__ == '__main__': 
     asyncio.run(main())
